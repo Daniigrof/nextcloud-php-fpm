@@ -1,0 +1,51 @@
+version: '2'
+
+volumes:
+  nextcloud-data:
+  nextcloud-db:
+
+services:
+  nextcloud:
+    image: nextcloud:16.0.4-fpm
+    container_name: nextcloud
+    links:
+      - db
+    volumes:
+      - ./nextcloud-data-html:/var/www/nextcloud
+      - ./nextcloud-data-html:/var/www/html
+      - ./proxy-next/config.php:/var/www/html/config/config.php
+    environment:
+      - MYSQL_PASSWORD=P@ssw0rd!
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_HOST=db
+
+  db:
+    image: mariadb:10.6
+    container_name: db
+    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+    volumes:
+      - nextcloud-db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=P@ssw0rd!
+      - MYSQL_PASSWORD=P@ssw0rd!
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+
+  web:
+    image: nginx:1.17.9
+    container_name: nginx
+    ports:
+      - 8080:80
+    links:
+      - nextcloud
+    volumes:
+      - ./proxy-next/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nextcloud-data-html:/var/www/nextcloud
+      # - ./proxy-next/cert.crt:/etc/ssl/nginx/cert.crt
+      # - ./proxy-next/cert.key:/etc/ssl/nginx/cert.key
+    volumes_from:
+      - nextcloud
+    depends_on:
+      - nextcloud
+      
